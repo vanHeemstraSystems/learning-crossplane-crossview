@@ -1,0 +1,20 @@
+apiVersion: database.example.com/v1alpha1
+kind: XPostgreSQLDatabase
+metadata:
+  name: my-app-database
+  namespace: production  # XRs can be namespace-scoped in Crossplane 2.x
+  labels:
+    app: my-application
+    environment: production
+    team: platform
+spec:
+  parameters:
+    size: medium
+    storageGB: 100
+    version: "15"
+    location: eastus
+  compositionRef:
+    name: xpostgresqldatabases.azure
+  writeConnectionSecretToRef:
+    name: my-app-database-connection
+    namespace: production

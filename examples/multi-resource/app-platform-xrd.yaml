@@ -1,0 +1,75 @@
+apiVersion: apiextensions.crossplane.io/v2
+kind: CompositeResourceDefinition
+metadata:
+  name: xappplatforms.platform.example.com
+spec:
+  group: platform.example.com
+  names:
+    kind: XAppPlatform
+    plural: xappplatforms
+  versions:
+  - name: v1alpha1
+    served: true
+    referenceable: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              parameters:
+                type: object
+                properties:
+                  appName:
+                    type: string
+                    description: Name of the application
+                  environment:
+                    type: string
+                    description: Environment (dev, staging, prod)
+                    enum:
+                    - dev
+                    - staging
+                    - prod
+                  location:
+                    type: string
+                    description: Azure region
+                    default: eastus
+                  databaseSize:
+                    type: string
+                    description: Database tier
+                    enum:
+                    - small
+                    - medium
+                    - large
+                    default: small
+                  storageGB:
+                    type: integer
+                    description: Database storage in GB
+                    minimum: 20
+                    maximum: 1000
+                    default: 100
+                  enableBackups:
+                    type: boolean
+                    description: Enable automated backups
+                    default: true
+                  enableMonitoring:
+                    type: boolean
+                    description: Enable Azure Monitor integration
+                    default: true
+                required:
+                - appName
+                - environment
+            required:
+            - parameters
+          status:
+            type: object
+            properties:
+              ready:
+                type: boolean
+              databaseEndpoint:
+                type: string
+              storageAccountName:
+                type: string
+              resourceGroupName:
+                type: string

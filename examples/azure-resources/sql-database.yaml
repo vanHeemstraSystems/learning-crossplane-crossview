@@ -1,0 +1,22 @@
+apiVersion: database.example.com/v1alpha1
+kind: XPostgreSQLDatabase
+metadata:
+  name: analytics-database
+  namespace: analytics
+  labels:
+    app: data-analytics
+    environment: production
+    cost-center: engineering
+  annotations:
+    description: "PostgreSQL database for analytics workloads"
+spec:
+  parameters:
+    size: large
+    storageGB: 500
+    version: "15"
+    location: westeurope
+  compositionRef:
+    name: xpostgresqldatabases.azure
+  writeConnectionSecretToRef:
+    name: analytics-db-connection
+    namespace: analytics

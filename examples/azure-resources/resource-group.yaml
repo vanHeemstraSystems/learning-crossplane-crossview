@@ -1,0 +1,16 @@
+apiVersion: azure.example.com/v1alpha1
+kind: XResourceGroup
+metadata:
+  name: app-platform-rg
+  labels:
+    environment: production
+    platform: app-platform
+spec:
+  parameters:
+    location: eastus
+    tags:
+      managed-by: crossplane
+      project: app-platform
+      cost-center: engineering
+  compositionRef:
+    name: xresourcegroups.azure

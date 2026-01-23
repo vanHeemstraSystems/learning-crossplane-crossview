@@ -1,0 +1,139 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xpostgresqldatabases.azure
+  labels:
+    provider: azure
+    database: postgresql
+spec:
+  compositeTypeRef:
+    apiVersion: database.example.com/v1alpha1
+    kind: XPostgreSQLDatabase
+  
+  mode: Pipeline
+  pipeline:
+  - step: patch-and-transform
+    functionRef:
+      name: function-patch-and-transform
+    input:
+      apiVersion: pt.fn.crossplane.io/v1beta1
+      kind: Resources
+      resources:
+      
+      # Azure PostgreSQL Server
+      - name: postgresql-server
+        base:
+          apiVersion: dbforpostgresql.azure.upbound.io/v1beta1
+          kind: Server
+          spec:
+            forProvider:
+              administratorLogin: psqladmin
+              sslEnforcement: Enabled
+              publicNetworkAccessEnabled: false
+              storageMb: 20480
+              sku:
+                name: B_Gen5_1
+                tier: Basic
+                capacity: 1
+        patches:
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.location
+          toFieldPath: spec.forProvider.location
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.version
+          toFieldPath: spec.forProvider.version
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.storageGB
+          toFieldPath: spec.forProvider.storageMb
+          transforms:
+          - type: math
+            math:
+              multiply: 1024
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.size
+          toFieldPath: spec.forProvider.sku.name
+          transforms:
+          - type: map
+            map:
+              small: B_Gen5_1
+              medium: GP_Gen5_2
+              large: GP_Gen5_4
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.size
+          toFieldPath: spec.forProvider.sku.tier
+          transforms:
+          - type: map
+            map:
+              small: Basic
+              medium: GeneralPurpose
+              large: GeneralPurpose
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.fullyQualifiedDomainName
+          toFieldPath: status.endpoint
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.conditions[?(@.type=='Ready')].status
+          toFieldPath: status.ready
+          transforms:
+          - type: map
+            map:
+              "True": true
+              "False": false
+      
+      # Storage Account for backups
+      - name: backup-storage
+        base:
+          apiVersion: storage.azure.upbound.io/v1beta1
+          kind: Account
+          spec:
+            forProvider:
+              accountTier: Standard
+              accountReplicationType: LRS
+              enableHttpsTrafficOnly: true
+        patches:
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.location
+          toFieldPath: spec.forProvider.location
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.name
+          transforms:
+          - type: string
+            string:
+              fmt: "%sbackup"
+              type: Format
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.primaryBlobEndpoint
+          toFieldPath: status.backupLocation
+      
+      # Secret for connection details
+      - name: connection-secret
+        base:
+          apiVersion: kubernetes.crossplane.io/v1alpha1
+          kind: Object
+          spec:
+            forProvider:
+              manifest:
+                apiVersion: v1
+                kind: Secret
+                metadata:
+                  namespace: default
+                type: Opaque
+        patches:
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.manifest.metadata.name
+          transforms:
+          - type: string
+            string:
+              fmt: "%s-connection"
+              type: Format
+        - type: CombineFromComposite
+          combine:
+            variables:
+            - fromFieldPath: status.endpoint
+            strategy: string
+            string:
+              fmt: "postgresql://psqladmin@%s:5432/postgres"
+          toFieldPath: spec.forProvider.manifest.data.connectionString
+          policy:
+            fromFieldPath: Required

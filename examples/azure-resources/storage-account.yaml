@@ -1,0 +1,24 @@
+apiVersion: storage.example.com/v1alpha1
+kind: XStorageAccount
+metadata:
+  name: app-storage
+  namespace: production
+  labels:
+    app: my-application
+    environment: production
+    type: blob-storage
+spec:
+  parameters:
+    accountTier: Standard
+    replicationType: GRS  # Geo-redundant storage
+    location: eastus
+    containers:
+    - name: uploads
+      publicAccess: None
+    - name: backups
+      publicAccess: None
+  compositionRef:
+    name: xstorageaccounts.azure
+  writeConnectionSecretToRef:
+    name: app-storage-connection
+    namespace: production

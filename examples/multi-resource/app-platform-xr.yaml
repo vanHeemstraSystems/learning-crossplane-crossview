@@ -1,0 +1,23 @@
+apiVersion: platform.example.com/v1alpha1
+kind: XAppPlatform
+metadata:
+  name: ecommerce-platform
+  namespace: production
+  labels:
+    app: ecommerce
+    environment: production
+    team: platform-engineering
+  annotations:
+    description: "Complete platform for e-commerce application including database, storage, and monitoring"
+spec:
+  parameters:
+    appName: ecommerce
+    environment: prod
+    location: eastus
+    databaseSize: large
+    storageGB: 500
+    enableBackups: true
+    enableMonitoring: true
+  compositionRef:
+    name: xappplatforms.azure
+  writeConnectionSecretsToNamespace: production
